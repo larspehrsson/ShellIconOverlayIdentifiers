@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Principal;
@@ -273,6 +274,22 @@ namespace ShellIconOverlayIdentifierSorter
                     Registry.LocalMachine.DeleteSubKey(rootKey + "\\" + newKey);
                 }
             }
+
+            RestartExplorer();
+        }
+
+        private static void RestartExplorer()
+        {
+            var answer = MessageBox.Show("Would you like to restart explorer to make the changes come into effect?",
+                "Restart explorer", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+
+            if (answer != MessageBoxResult.Yes)
+                return;
+
+            Process[] ps = Process.GetProcessesByName("explorer");
+
+            foreach (Process p in ps)
+                p.Kill();
         }
     }
 }
