@@ -11,48 +11,65 @@ using Microsoft.Win32;
 
 namespace ShellIconOverlayIdentifierSorter
 {
-    // Stores all the data from Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ShellIconOverlayIdentifiers
+    /// <summary>
+    ///     Stores all the data from
+    ///     Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ShellIconOverlayIdentifiers
+    /// </summary>
     internal class overlay : INotifyPropertyChanged
     {
         private int _nr;
 
-        // Row number.
+        /// <summary>
+        ///     Row number.
+        /// </summary>
         public int nr
         {
             get => _nr;
             set
             {
                 _nr = value;
-                this.NotifyPropertyChanged("nr");
-                this.NotifyPropertyChanged("active");
+                NotifyPropertyChanged("nr");
+                NotifyPropertyChanged("active");
             }
         }
 
-        // Keyname. This need to match the filename if you want an icon
+        /// <summary>
+        ///     Keyname. This need to match the filename if you want an icon
+        /// </summary>
         public string name { get; set; }
 
-        // The icon
+        /// <summary>
+        ///     The icon
+        /// </summary>
         public BitmapImage icon { get; set; }
 
-        // The path to the dll that contains the icon (just for show)
+        /// <summary>
+        ///     The path to the dll that contains the icon (just for show)
+        /// </summary>
         public string dll { get; set; }
 
-        // How many spaces of identation is necessary to achieve the right sort order
+        /// <summary>
+        ///     How many spaces of indentation is necessary to achieve the right sort order
+        /// </summary>
         public int indent { get; set; }
 
-        // Grays out the background for the rest of the rows
+        /// <summary>
+        ///     Grays out the background for the rest of the rows
+        /// </summary>
         public bool active => nr > 14;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         public void NotifyPropertyChanged(string propName)
         {
-            if (this.PropertyChanged != null)
-                this.PropertyChanged(this, new PropertyChangedEventArgs(propName));
+            if (PropertyChanged != null)
+                PropertyChanged(this, new PropertyChangedEventArgs(propName));
         }
     }
 
-    // Stores whatever icons and pictures it can find in the "icons" folder
+    /// <summary>
+    ///     Stores whatever icons and pictures it can find in the "icons" folder
+    /// </summary>
     internal class icon
     {
         public string name { get; set; }
@@ -74,9 +91,10 @@ namespace ShellIconOverlayIdentifierSorter
 
             if (!IsElevated)
             {
-                MessageBox.Show("Need to run as administrator", "Run as admin", MessageBoxButton.OK,
+                MessageBox.Show("Need to run as administrator. You can look, but ýou can's save", "Run as admin",
+                    MessageBoxButton.OK,
                     MessageBoxImage.Error);
-                Application.Current.Shutdown();
+                saveButton.IsEnabled = false;
             }
 
             GetIconFiles();
@@ -94,6 +112,15 @@ namespace ShellIconOverlayIdentifierSorter
             _dragMgr.ProcessDrop += dragMgr_ProcessDrop;
         }
 
+        /// <summary>
+        /// Check that the program is running with elevated rights
+        /// </summary>
+        public bool IsElevated =>
+            new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+
+        /// <summary>
+        /// Get all the registry keys from HKLM\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers
+        /// </summary>
         private void GetRegistryKeys()
         {
             var nr = 0;
@@ -106,11 +133,21 @@ namespace ShellIconOverlayIdentifierSorter
                     .OpenSubKey(
                         "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers\\" + v)
                     .GetValue(null);
-                var clsid = @"CLSID\" + keyValue + @"\InProcServer32";
-                var inproc = Registry.ClassesRoot.OpenSubKey(clsid);
-                var inprocValue = (string)inproc.GetValue(null);
 
-                var o = new overlay
+                // Try to find the DLL file providing the icon
+                var inprocValue = "";
+                try
+                {
+                    var clsid = @"CLSID\" + keyValue + @"\InProcServer32";
+                    var inproc = Registry.ClassesRoot.OpenSubKey(clsid);
+                    inprocValue = (string)inproc.GetValue(null);
+                }
+                catch
+                {
+                    // ignored
+                }
+
+                var overlay = new overlay
                 {
                     nr = nr,
                     name = v.Trim(),
@@ -118,27 +155,38 @@ namespace ShellIconOverlayIdentifierSorter
                     dll = inprocValue
                 };
 
-                _overlayList.Add(o);
+                _overlayList.Add(overlay);
             }
         }
 
+        /// <summary>
+        /// Get icon files from the icons folder. The file names will later be matched with the registry key name
+        /// </summary>
         private void GetIconFiles()
         {
             var files = Directory.GetFiles("icons", "*", SearchOption.AllDirectories);
 
-            foreach (var file1 in files)
-            {
-                var i = new icon
+            foreach (var file in files)
+                try
                 {
-                    name = Path.GetFileNameWithoutExtension(file1),
-                    image = new BitmapImage(new Uri(Path.GetFullPath(file1)))
-                };
-                _iconList.Add(i);
-            }
+                    var icon = new icon
+                    {
+                        name = Path.GetFileNameWithoutExtension(file),
+                        image = new BitmapImage(new Uri(Path.GetFullPath(file)))
+                    };
+                    _iconList.Add(icon);
+                }
+                catch
+                {
+                    // ignored
+                }
         }
 
-        public bool IsElevated => new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-
+        /// <summary>
+        /// Handles the drag and drop in the list
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void dragMgr_ProcessDrop(object sender, ProcessDropEventArgs<overlay> e)
         {
             // This shows how to customize the behavior of a drop.
@@ -168,7 +216,6 @@ namespace ShellIconOverlayIdentifierSorter
                     e.ItemsSource.Move(e.OldIndex, e.NewIndex);
                 else
                     e.ItemsSource.Insert(e.NewIndex, e.DataItem);
-                //e.ItemsSource.Move(higherIdx - 1, lowerIdx);
             }
 
             var nr = 0;
@@ -180,25 +227,34 @@ namespace ShellIconOverlayIdentifierSorter
             e.Effects = DragDropEffects.Move;
         }
 
+        /// <summary>
+        /// Saves the changes
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void SaveOnClick(object sender, RoutedEventArgs e)
         {
             var rootKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers";
 
+            // Calculate how many spaces that needs to be added to keep the requested sort order
             var indent = 0;
             for (var index = 0; index < _overlayList.Count - 1; index++)
             {
                 _overlayList[index].indent = indent;
+                // if the next entry is less than the current, increase the index
                 if (string.CompareOrdinal(_overlayList[index].name, _overlayList[index + 1].name) >= 0)
                     indent++;
             }
 
             _overlayList[_overlayList.Count - 1].indent = indent;
 
+            // Update the registry
             foreach (var f in _overlayList)
             {
                 var newKey = "".PadLeft(indent - f.indent, ' ') + f.name;
 
-                var subkey = Registry.LocalMachine.OpenSubKey(rootKey).GetSubKeyNames().FirstOrDefault(c => c.Trim() == f.name);
+                var subkey = Registry.LocalMachine.OpenSubKey(rootKey).GetSubKeyNames()
+                    .FirstOrDefault(c => c.Trim() == f.name);
                 if (subkey == null) continue;
 
                 var oldSubKey = Registry.LocalMachine.OpenSubKey(rootKey + "\\" + subkey);

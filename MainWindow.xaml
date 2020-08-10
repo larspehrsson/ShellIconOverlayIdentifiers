@@ -65,6 +65,7 @@
             </ListView.View>
         </ListView>
         <Button Content="Save"
+                Name="saveButton"
                 Margin="0,0,10,10"
                 HorizontalAlignment="Right"
                 Width="75"
