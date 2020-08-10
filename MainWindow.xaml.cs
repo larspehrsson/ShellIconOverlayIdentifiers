@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Security.Principal;
@@ -11,10 +12,21 @@ using Microsoft.Win32;
 namespace ShellIconOverlayIdentifierSorter
 {
     // Stores all the data from Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ShellIconOverlayIdentifiers
-    internal class overlay
+    internal class overlay : INotifyPropertyChanged
     {
+        private int _nr;
+
         // Row number.
-        public int nr { get; set; }
+        public int nr
+        {
+            get => _nr;
+            set
+            {
+                _nr = value;
+                this.NotifyPropertyChanged("nr");
+                this.NotifyPropertyChanged("active");
+            }
+        }
 
         // Keyname. This need to match the filename if you want an icon
         public string name { get; set; }
@@ -30,6 +42,14 @@ namespace ShellIconOverlayIdentifierSorter
 
         // Grays out the background for the rest of the rows
         public bool active => nr > 14;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public void NotifyPropertyChanged(string propName)
+        {
+            if (this.PropertyChanged != null)
+                this.PropertyChanged(this, new PropertyChangedEventArgs(propName));
+        }
     }
 
     // Stores whatever icons and pictures it can find in the "icons" folder
@@ -59,18 +79,23 @@ namespace ShellIconOverlayIdentifierSorter
                 Application.Current.Shutdown();
             }
 
-            var files = Directory.GetFiles("icons", "*", SearchOption.AllDirectories);
+            GetIconFiles();
 
-            foreach (var file1 in files)
+            GetRegistryKeys();
+
+            listView.ItemsSource = _overlayList;
+
+            // Enable drag and drop
+            _dragMgr = new ListViewDragDropManager<overlay>(listView)
             {
-                var i = new icon
-                {
-                    name = Path.GetFileNameWithoutExtension(file1),
-                    image = new BitmapImage(new Uri(Path.GetFullPath(file1)))
-                };
-                _iconList.Add(i);
-            }
+                ShowDragAdorner = true,
+                DragAdornerOpacity = 0.5
+            };
+            _dragMgr.ProcessDrop += dragMgr_ProcessDrop;
+        }
 
+        private void GetRegistryKeys()
+        {
             var nr = 0;
             var key = Registry.LocalMachine.OpenSubKey(
                 "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers");
@@ -95,15 +120,21 @@ namespace ShellIconOverlayIdentifierSorter
 
                 _overlayList.Add(o);
             }
+        }
 
-            listView.ItemsSource = _overlayList;
+        private void GetIconFiles()
+        {
+            var files = Directory.GetFiles("icons", "*", SearchOption.AllDirectories);
 
-            _dragMgr = new ListViewDragDropManager<overlay>(listView)
+            foreach (var file1 in files)
             {
-                ShowDragAdorner = true,
-                DragAdornerOpacity = 0.5
-            };
-            _dragMgr.ProcessDrop += dragMgr_ProcessDrop;
+                var i = new icon
+                {
+                    name = Path.GetFileNameWithoutExtension(file1),
+                    image = new BitmapImage(new Uri(Path.GetFullPath(file1)))
+                };
+                _iconList.Add(i);
+            }
         }
 
         public bool IsElevated => new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);

@@ -49,6 +49,7 @@
             <ListView.View>
 
                 <GridView>
+                    <GridViewColumn DisplayMemberBinding="{Binding nr}" Header="Nr" />
                     <GridViewColumn Header="Image" Width="30">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
