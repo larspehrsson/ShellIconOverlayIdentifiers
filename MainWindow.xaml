@@ -1,0 +1,74 @@
+﻿<Window x:Class="ShellIconOverlayIdentifierSorter.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ShellIconOverlayIdentifierSorter"
+        xmlns:jas="clr-namespace:ShellIconOverlayIdentifierSorter"
+        mc:Ignorable="d"
+        Title="ShellIconOverlayIdentifiers" Height="800" Width="900">
+
+    <Window.Resources>
+        <Style x:Key="ItemContStyle" TargetType="ListViewItem">
+            <Style.Resources>
+                <LinearGradientBrush x:Key="MouseOverBrush" StartPoint="0.5, 0" EndPoint="0.5, 1">
+                    <GradientStop Color="#22000000" Offset="0" />
+                    <GradientStop Color="#44000000" Offset="0.4" />
+                    <GradientStop Color="#55000000" Offset="0.6" />
+                    <GradientStop Color="#33000000" Offset="0.9" />
+                    <GradientStop Color="#22000000" Offset="1" />
+                </LinearGradientBrush>
+            </Style.Resources>
+            <Setter Property="Padding" Value="0,4" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <!-- The default control template for ListViewItem has a Border which contains the item's content. -->
+            <Setter Property="Border.BorderThickness" Value="0,0,0,0.5" />
+            <Setter Property="Border.BorderBrush" Value="LightGray" />
+            <!-- These triggers react to changes in the attached properties set during a managed drag-drop operation. -->
+            <Style.Triggers>
+                <Trigger Property="local:ListViewItemDragState.IsBeingDragged" Value="True">
+                    <Setter Property="FontWeight" Value="DemiBold" />
+                </Trigger>
+                <Trigger Property="local:ListViewItemDragState.IsUnderDragCursor" Value="True">
+                    <Setter Property="Background" Value="{StaticResource MouseOverBrush}" />
+                </Trigger>
+
+                <DataTrigger Binding="{Binding active}" Value="True">
+                    <Setter Property="Background" Value="LightGray" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+
+        <ListView Margin="10,10,10,47"
+                  Name="listView"
+                  ItemContainerStyle="{StaticResource ItemContStyle}">
+
+            <ListView.View>
+
+                <GridView>
+                    <GridViewColumn Header="Image" Width="30">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <!--<Grid>-->
+                                <Image Source="{Binding icon}" Height="20" />
+                                <!--</Grid>-->
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn DisplayMemberBinding="{Binding name}" Header="Name" />
+                    <GridViewColumn DisplayMemberBinding="{Binding dll}" Header="dll" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Button Content="Save"
+                Margin="0,0,10,10"
+                HorizontalAlignment="Right"
+                Width="75"
+                Height="20"
+                VerticalAlignment="Bottom"
+                Click="SaveOnClick" />
+    </Grid>
+</Window>
