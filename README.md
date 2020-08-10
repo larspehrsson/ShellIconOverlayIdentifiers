@@ -7,7 +7,12 @@ This tools gives an easy access to reorder the entries by drag and drop.
 
 ![](SellIconOverlayIdentifiers.png)
 
+Resulting registry. Items are added with a number of spaces to make sure that they are sorted properly.
+![](registry.png)
+
 Icons are found in the "icons" subfolder and not in the dll. You can add your own. Some of them might be incorrect as I had to guess the connection between the name and the icon number. I'm sure they can be pulled from the dll, but I haven't bothered.
+
+Some registry entries might be write protected, so they will be skipped. You can't rename a registry key, so the only way to to this, is to create a new and copy the content to the new registry key. 
 
 Drag and drop code by Josh Smith
 https://www.codeproject.com/Articles/17266/Drag-and-Drop-Items-in-a-WPF-ListView
