@@ -31,6 +31,8 @@
                 </Trigger>
                 <Trigger Property="local:ListViewItemDragState.IsUnderDragCursor" Value="True">
                     <Setter Property="Background" Value="{StaticResource MouseOverBrush}" />
+                    <Setter Property="Border.BorderBrush" Value="Black" />
+                    <Setter Property="Border.BorderThickness" Value="0,1.5,0,0" />
                 </Trigger>
 
                 <DataTrigger Binding="{Binding active}" Value="True">
