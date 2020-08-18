@@ -67,12 +67,18 @@
             </ListView.View>
         </ListView>
         <Button Content="Save"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Right"
                 Name="saveButton"
                 Margin="0,0,10,10"
-                HorizontalAlignment="Right"
                 Width="75"
                 Height="20"
-                VerticalAlignment="Bottom"
                 Click="SaveOnClick" />
+        <Button Content="Delete duplicates"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Right"
+                Margin="0,0,104,10"
+                Width="109"
+                Click="DeleteDuplicates_Click" />
     </Grid>
 </Window>

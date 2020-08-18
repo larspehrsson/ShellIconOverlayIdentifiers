@@ -85,6 +85,7 @@ namespace ShellIconOverlayIdentifierSorter
         private readonly ListViewDragDropManager<overlay> _dragMgr;
         private readonly List<icon> _iconList = new List<icon>();
         private readonly ObservableCollection<overlay> _overlayList = new ObservableCollection<overlay>();
+        private const string rootKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers";
 
         public MainWindow()
         {
@@ -92,17 +93,13 @@ namespace ShellIconOverlayIdentifierSorter
 
             if (!IsElevated)
             {
-                MessageBox.Show("Need to run as administrator. You can look, but ýou can's save", "Run as admin",
+                MessageBox.Show("Need to run as administrator. You can look, but you can't save", "Run as admin",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 saveButton.IsEnabled = false;
             }
 
-            GetIconFiles();
-
-            GetRegistryKeys();
-
-            listView.ItemsSource = _overlayList;
+            RefreshList();
 
             // Enable drag and drop
             _dragMgr = new ListViewDragDropManager<overlay>(listView)
@@ -114,26 +111,33 @@ namespace ShellIconOverlayIdentifierSorter
         }
 
         /// <summary>
-        /// Check that the program is running with elevated rights
+        ///     Check that the program is running with elevated rights
         /// </summary>
         public bool IsElevated =>
             new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
 
+        private void RefreshList()
+        {
+            GetIconFiles();
+
+            GetRegistryKeys();
+
+            listView.ItemsSource = _overlayList;
+        }
+
         /// <summary>
-        /// Get all the registry keys from HKLM\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers
+        ///     Get all the registry keys from
+        ///     HKLM\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers
         /// </summary>
         private void GetRegistryKeys()
         {
+            _overlayList.Clear();
             var nr = 0;
-            var key = Registry.LocalMachine.OpenSubKey(
-                "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers");
+            var key = Registry.LocalMachine.OpenSubKey(rootKey);
             foreach (var v in key.GetSubKeyNames())
             {
                 nr++;
-                var keyValue = (string)Registry.LocalMachine
-                    .OpenSubKey(
-                        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers\\" + v)
-                    .GetValue(null);
+                var keyValue = (string)Registry.LocalMachine.OpenSubKey($"{rootKey}\\{v}").GetValue(null);
 
                 // Try to find the DLL file providing the icon
                 var inprocValue = "";
@@ -161,12 +165,12 @@ namespace ShellIconOverlayIdentifierSorter
         }
 
         /// <summary>
-        /// Get icon files from the icons folder. The file names will later be matched with the registry key name
+        ///     Get icon files from the icons folder. The file names will later be matched with the registry key name
         /// </summary>
         private void GetIconFiles()
         {
+            _iconList.Clear();
             var files = Directory.GetFiles("icons", "*", SearchOption.AllDirectories);
-
             foreach (var file in files)
                 try
                 {
@@ -184,7 +188,7 @@ namespace ShellIconOverlayIdentifierSorter
         }
 
         /// <summary>
-        /// Handles the drag and drop in the list
+        ///     Handles the drag and drop in the list
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -229,14 +233,12 @@ namespace ShellIconOverlayIdentifierSorter
         }
 
         /// <summary>
-        /// Saves the changes
+        ///     Saves the changes
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void SaveOnClick(object sender, RoutedEventArgs e)
         {
-            var rootKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers";
-
             // Calculate how many spaces that needs to be added to keep the requested sort order
             var indent = 0;
             for (var index = 0; index < _overlayList.Count - 1; index++)
@@ -252,26 +254,25 @@ namespace ShellIconOverlayIdentifierSorter
             // Update the registry
             foreach (var f in _overlayList)
             {
-                var newKey = "".PadLeft(indent - f.indent, ' ') + f.name;
+                var newKeyName = "".PadLeft(indent - f.indent, ' ') + f.name;
 
-                var subkey = Registry.LocalMachine.OpenSubKey(rootKey).GetSubKeyNames()
-                    .FirstOrDefault(c => c.Trim() == f.name);
-                if (subkey == null) continue;
+                var subKeyName = Registry.LocalMachine.OpenSubKey(rootKey).GetSubKeyNames().FirstOrDefault(c => c.Trim() == f.name);
+                if (subKeyName == null) continue;
 
-                var oldSubKey = Registry.LocalMachine.OpenSubKey(rootKey + "\\" + subkey);
-                if (newKey == subkey) continue;
+                var oldSubKeyName = Registry.LocalMachine.OpenSubKey(rootKey + "\\" + subKeyName);
+                if (newKeyName == subKeyName) continue;
 
-                var keyValue = (string)oldSubKey.GetValue(null);
+                var keyValue = (string)oldSubKeyName.GetValue(null);
 
-                Registry.LocalMachine.CreateSubKey(rootKey + "\\" + newKey).SetValue(null, keyValue);
+                Registry.LocalMachine.CreateSubKey(rootKey + "\\" + newKeyName).SetValue(null, keyValue);
 
                 try
                 {
-                    Registry.LocalMachine.DeleteSubKey(rootKey + "\\" + subkey);
+                    Registry.LocalMachine.DeleteSubKey(rootKey + "\\" + subKeyName);
                 }
                 catch (Exception)
                 {
-                    Registry.LocalMachine.DeleteSubKey(rootKey + "\\" + newKey);
+                    Registry.LocalMachine.DeleteSubKey(rootKey + "\\" + newKeyName);
                 }
             }
 
@@ -280,16 +281,38 @@ namespace ShellIconOverlayIdentifierSorter
 
         private static void RestartExplorer()
         {
-            var answer = MessageBox.Show("Would you like to restart explorer to make the changes come into effect?",
-                "Restart explorer", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            var answer = MessageBox.Show(
+                "Would you like to restart explorer to make the changes come into effect?",
+                "Restart explorer",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Question);
 
             if (answer != MessageBoxResult.Yes)
                 return;
 
-            Process[] ps = Process.GetProcessesByName("explorer");
+            var ps = Process.GetProcessesByName("explorer").ToList();
 
-            foreach (Process p in ps)
+            foreach (var p in ps)
                 p.Kill();
+        }
+
+        private void DeleteDuplicates_Click(object sender, RoutedEventArgs e)
+        {
+            var seenList = new List<string>();
+            var key = Registry.LocalMachine.OpenSubKey(rootKey);
+            foreach (var v in key.GetSubKeyNames())
+                if (seenList.Any(c => c == v.Trim()))
+                    try
+                    {
+                        Registry.LocalMachine.DeleteSubKey(rootKey + "\\" + v);
+                    }
+                    catch
+                    {
+                    }
+                else
+                    seenList.Add(v.Trim());
+
+            RefreshList();
         }
     }
 }
