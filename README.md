@@ -17,5 +17,7 @@ Icons are found in the "icons" subfolder and not in the dll. You can add your ow
 
 Some registry entries might be write protected, so they will be skipped. You can't rename a registry key, so the only way to do reorder them, is to create a new and copy the content to the new registry key and then deleting the old.
 
+![](rearrange.gif)
+
 Drag and drop code by Josh Smith
 https://www.codeproject.com/Articles/17266/Drag-and-Drop-Items-in-a-WPF-ListView
