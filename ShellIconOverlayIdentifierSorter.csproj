@@ -177,28 +177,49 @@
     <Content Include="Icons\Google\Untitled-4.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Icons\MEGA\MEGA %28Pending%29.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Icons\MEGA\MEGA %28Synced%29.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Icons\MEGA\MEGA %28Syncing%29.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Icons\Koofr\KError.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Icons\Koofr\KIgnored.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Icons\Koofr\KOK.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Icons\Koofr\KSyncing.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Icons\Offline Files.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Icons\OneDrive\OneDrive1.png">
+    <Content Include="Icons\OneDrive\OneDrive1.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Icons\OneDrive\OneDrive2.png">
+    <Content Include="Icons\OneDrive\OneDrive2.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Icons\OneDrive\OneDrive3.png">
+    <Content Include="Icons\OneDrive\OneDrive3.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Icons\OneDrive\OneDrive4.png">
+    <Content Include="Icons\OneDrive\OneDrive4.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Icons\OneDrive\OneDrive5.png">
+    <Content Include="Icons\OneDrive\OneDrive5.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Icons\OneDrive\OneDrive6.png">
+    <Content Include="Icons\OneDrive\OneDrive6.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Icons\OneDrive\OneDrive7.png">
+    <Content Include="Icons\OneDrive\OneDrive7.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Icons\Tortoise\Tortoise1Normal.ico">
