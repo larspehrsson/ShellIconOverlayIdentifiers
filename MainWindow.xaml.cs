@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Security.Principal;
@@ -82,10 +84,12 @@ namespace ShellIconOverlayIdentifierSorter
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const string rootKey =
+            "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers";
+
         private readonly ListViewDragDropManager<overlay> _dragMgr;
         private readonly List<icon> _iconList = new List<icon>();
         private readonly ObservableCollection<overlay> _overlayList = new ObservableCollection<overlay>();
-        private const string rootKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers";
 
         public MainWindow()
         {
@@ -170,14 +174,20 @@ namespace ShellIconOverlayIdentifierSorter
         private void GetIconFiles()
         {
             _iconList.Clear();
-            var files = Directory.GetFiles("icons", "*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(".", "*", SearchOption.AllDirectories);
             foreach (var file in files)
                 try
                 {
+                    var bitmap = new Bitmap(file);
+                    //var trimimage = TrimImage(bitmap, 0);
+                    var trimimage = Crop(bitmap);
+                    trimimage.Save(file + ".new." + Path.GetExtension(file));
+                    var bitmapimage = trimimage.ToBitmapImage();
+
                     var icon = new icon
                     {
                         name = Path.GetFileNameWithoutExtension(file),
-                        image = new BitmapImage(new Uri(Path.GetFullPath(file)))
+                        image = bitmapimage // new BitmapImage(new Uri(Path.GetFullPath(file)))
                     };
                     _iconList.Add(icon);
                 }
@@ -185,6 +195,97 @@ namespace ShellIconOverlayIdentifierSorter
                 {
                     // ignored
                 }
+        }
+
+        /// <summary>
+        ///     https://gist.github.com/MarathonDrew/e573961a40d1034c591cc35451b017a0
+        /// </summary>
+        /// <param name="bmp"></param>
+        /// <returns></returns>
+        private static Bitmap Crop(Bitmap bmp)
+        {
+            var w = bmp.Width;
+            var h = bmp.Height;
+
+            Func<int, bool> allWhiteRow = row =>
+            {
+                for (var i = 0; i < w; ++i)
+                    if (bmp.GetPixel(i, row).ToArgb() != 255 && bmp.GetPixel(i, row).ToArgb() != 0)
+                        //System.Diagnostics.Debug.WriteLine($"{i},{row} = {bmp.GetPixel(i, row).ToArgb()}");
+                        return false;
+
+                return true;
+            };
+
+            Func<int, bool> allWhiteColumn = col =>
+            {
+                for (var i = 0; i < h; ++i)
+                    if (bmp.GetPixel(col, i).ToArgb() != 255 && bmp.GetPixel(col, i).ToArgb() != 0)
+                        //System.Diagnostics.Debug.WriteLine($"{col},{i} = {bmp.GetPixel(col, i).ToArgb()}");
+                        return false;
+
+                return true;
+            };
+
+            var topmost = 0;
+            for (var row = 0; row < h; ++row)
+                if (allWhiteRow(row))
+                    topmost = row;
+                else break;
+
+            var bottommost = 0;
+            for (var row = h - 1; row >= 0; --row)
+                if (allWhiteRow(row))
+                    bottommost = row;
+                else break;
+
+            int leftmost = 0, rightmost = 0;
+            for (var col = 0; col < w; ++col)
+                if (allWhiteColumn(col))
+                    leftmost = col;
+                else
+                    break;
+
+            for (var col = w - 1; col >= 0; --col)
+                if (allWhiteColumn(col))
+                    rightmost = col;
+                else
+                    break;
+
+            if (rightmost == 0) rightmost = w; // As reached left
+            if (bottommost == 0) bottommost = h; // As reached top.
+
+            var croppedWidth = rightmost - leftmost;
+            var croppedHeight = bottommost - topmost;
+
+            if (croppedWidth == 0) // No border on left or right
+            {
+                leftmost = 0;
+                croppedWidth = w;
+            }
+
+            if (croppedHeight == 0) // No border on top or bottom
+            {
+                topmost = 0;
+                croppedHeight = h;
+            }
+
+            try
+            {
+                var croppedBitmap = new Bitmap(bmp);
+                croppedBitmap = croppedBitmap.Clone(
+                    new RectangleF(leftmost, topmost, croppedWidth, croppedHeight),
+                    PixelFormat.DontCare);
+                return croppedBitmap;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(
+                    string.Format(
+                        "Values are topmost={0} btm={1} left={2} right={3} croppedWidth={4} croppedHeight={5}", topmost,
+                        bottommost, leftmost, rightmost, croppedWidth, croppedHeight),
+                    ex);
+            }
         }
 
         /// <summary>
@@ -256,7 +357,8 @@ namespace ShellIconOverlayIdentifierSorter
             {
                 var newKeyName = "".PadLeft(indent - f.indent, ' ') + f.name;
 
-                var subKeyName = Registry.LocalMachine.OpenSubKey(rootKey).GetSubKeyNames().FirstOrDefault(c => c.Trim() == f.name);
+                var subKeyName = Registry.LocalMachine.OpenSubKey(rootKey).GetSubKeyNames()
+                    .FirstOrDefault(c => c.Trim() == f.name);
                 if (subKeyName == null) continue;
 
                 var oldSubKeyName = Registry.LocalMachine.OpenSubKey(rootKey + "\\" + subKeyName);
@@ -313,6 +415,30 @@ namespace ShellIconOverlayIdentifierSorter
                     seenList.Add(v.Trim());
 
             RefreshList();
+        }
+    }
+
+    public static class ExensionMethods
+    {
+        /// <summary>
+        /// https://stackoverflow.com/questions/6484357/converting-bitmapimage-to-bitmap-and-vice-versa from LawMan
+        /// </summary>
+        public static BitmapImage ToBitmapImage(this Bitmap bitmap)
+        {
+            using (var memory = new MemoryStream())
+            {
+                bitmap.Save(memory, ImageFormat.Png);
+                memory.Position = 0;
+
+                var bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.StreamSource = memory;
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.EndInit();
+                bitmapImage.Freeze();
+
+                return bitmapImage;
+            }
         }
     }
 }
