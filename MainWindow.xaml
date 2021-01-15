@@ -36,7 +36,7 @@
                 </Trigger>
 
                 <DataTrigger Binding="{Binding active}" Value="True">
-                    <Setter Property="Background" Value="LightGray" />
+                    <Setter Property="Background" Value="LightBlue" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>

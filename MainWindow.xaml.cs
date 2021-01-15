@@ -17,6 +17,7 @@ namespace ShellIconOverlayIdentifierSorter
     /// <summary>
     ///     Stores all the data from
     ///     Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ShellIconOverlayIdentifiers
+    ///     Computer\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\ShellIconOverlayIdentifiers\
     /// </summary>
     internal class overlay : INotifyPropertyChanged
     {
@@ -84,8 +85,8 @@ namespace ShellIconOverlayIdentifierSorter
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const string rootKey =
-            "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellIconOverlayIdentifiers";
+        private const string rootKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ShellIconOverlayIdentifiers";
+        private const string rootKey2 = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Explorer\ShellIconOverlayIdentifiers";
 
         private readonly ListViewDragDropManager<overlay> _dragMgr;
         private readonly List<icon> _iconList = new List<icon>();
@@ -149,7 +150,7 @@ namespace ShellIconOverlayIdentifierSorter
                 {
                     var clsid = @"CLSID\" + keyValue + @"\InProcServer32";
                     var inproc = Registry.ClassesRoot.OpenSubKey(clsid);
-                    inprocValue = (string)inproc.GetValue(null);
+                    inprocValue = (string)inproc?.GetValue(null);
                 }
                 catch
                 {
@@ -179,9 +180,8 @@ namespace ShellIconOverlayIdentifierSorter
                 try
                 {
                     var bitmap = new Bitmap(file);
-                    //var trimimage = TrimImage(bitmap, 0);
                     var trimimage = Crop(bitmap);
-                    trimimage.Save(file + ".new." + Path.GetExtension(file));
+                    //trimimage.Save(file + ".new." + Path.GetExtension(file));
                     var bitmapimage = trimimage.ToBitmapImage();
 
                     var icon = new icon
@@ -401,9 +401,12 @@ namespace ShellIconOverlayIdentifierSorter
         private void DeleteDuplicates_Click(object sender, RoutedEventArgs e)
         {
             var seenList = new List<string>();
+
             var key = Registry.LocalMachine.OpenSubKey(rootKey);
             foreach (var v in key.GetSubKeyNames())
+            {
                 if (seenList.Any(c => c == v.Trim()))
+                {
                     try
                     {
                         Registry.LocalMachine.DeleteSubKey(rootKey + "\\" + v);
@@ -411,8 +414,32 @@ namespace ShellIconOverlayIdentifierSorter
                     catch
                     {
                     }
+                }
                 else
+                {
                     seenList.Add(v.Trim());
+                }
+            }
+
+            seenList.Clear();
+            var key2 = Registry.LocalMachine.OpenSubKey(rootKey2);
+            foreach (var v in key2.GetSubKeyNames())
+            {
+                if (seenList.Any(c => c == v.Trim()))
+                {
+                    try
+                    {
+                        Registry.LocalMachine.DeleteSubKey(rootKey2 + "\\" + v);
+                    }
+                    catch
+                    {
+                    }
+                }
+                else
+                {
+                    seenList.Add(v.Trim());
+                }
+            }
 
             RefreshList();
         }
